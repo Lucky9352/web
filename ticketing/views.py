@@ -36,8 +36,8 @@ from .forms import (
 )
 from .models import User, Event, Ticket, PromoCode, EventStaff, TicketType, PromoCodeUsage, PaymentTransaction
 from .utils import generate_otp, send_otp_email
-from weasyprint import HTML, CSS
-import imgkit
+# Removed: from weasyprint import HTML, CSS
+# Removed: import imgkit
 
 # cashfree
 from cashfree_pg.api_client import Cashfree
@@ -1040,6 +1040,7 @@ def send_ticket_email(request, ticket_id):
             logger.error(f"PIL image generation failed: {str(pil_error)}. Falling back to PDF.")
             
             # Last resort: Generate PDF with WeasyPrint and tell the user
+            # Generate PDF with WeasyPrint
             try:
                 # Set up the email components first
                 subject = f"Your Event Pass for {ticket.event.title}"
@@ -1061,14 +1062,14 @@ def send_ticket_email(request, ticket_id):
                 to_email = ticket.customer.email
                 
                 # Generate PDF with WeasyPrint
-                css = CSS(filename=css_path)
-                html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-                pdf_bytes = html.write_pdf(stylesheets=[css])
+                # css = CSS(filename=css_path) # Removed: WeasyPrint is not available
+                # html = HTML(string=html_string, base_url=request.build_absolute_uri('/')) # Removed: WeasyPrint is not available
+                # pdf_bytes = html.write_pdf(stylesheets=[css]) # Removed: WeasyPrint is not available
                 
                 # Create and send email with PDF attachment
                 msg = EmailMultiAlternatives(subject, plain_message, from_email, [to_email])
                 msg.attach_alternative(html_message, "text/html")
-                msg.attach(f'event_pass_{ticket.ticket_number}.pdf', pdf_bytes, 'application/pdf')
+                # msg.attach(f'event_pass_{ticket.ticket_number}.pdf', pdf_bytes, 'application/pdf') # Removed: WeasyPrint is not available
                 
                 msg.send(fail_silently=False)
                 

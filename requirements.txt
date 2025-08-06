@@ -9,7 +9,6 @@ Django==5.2.5
 django-crispy-forms==2.4
 dotenv==0.9.9
 fonttools==4.59.0
-imgkit==1.2.3
 pillow==11.3.0
 psycopg2-binary==2.9.10
 pycparser==2.22
@@ -26,7 +25,4 @@ tinycss2==1.4.0
 tinyhtml5==2.0.0
 typing_extensions==4.14.1
 urllib3==2.0.7
-weasyprint==66.0
-webencodings==0.5.1
-whitenoise==6.9.0
-zopfli==0.2.3.post1
+# Removed imgkit and weasyprint for Vercel compatibility
