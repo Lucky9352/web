@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ action }} Event{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-blue-600 mb-8">{{ action }} Event</h1>
+
+            <!-- Upload Method Selection -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md mb-8">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Choose Upload Method</h2>
+                <div class="flex space-x-4">
+                    <button onclick="showForm('manual')" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Manual Form
+                    </button>
+                    <button onclick="showForm('csv')" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                        Upload CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- CSV Upload Form -->
+            <div id="csvForm" class="hidden bg-white shadow-md rounded-lg p-6 mb-8">
+                <h3 class="text-lg font-semibold mb-4">Upload CSV File</h3>
+                <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                    <p class="text-sm text-blue-700">
+                        <strong>Tips for CSV Upload:</strong>
+                        <ul class="list-disc pl-5 mt-2 space-y-1">
+                            <li>Download the <a href="{% url 'download_sample_csv' %}" class="underline">sample CSV template</a> to see the required format.</li>
+                            <li>No character limits on text fields like descriptions.</li>
+                            <li>At least one ticket type is required.</li>
+                            <li>Dates should be in YYYY-MM-DD format, times in HH:MM format.</li>
+                            <li>View the <a href="{% url 'download_csv_guide' %}" class="underline">complete CSV guide</a> for more information.</li>
+                        </ul>
+                    </p>
+                </div>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="csv_file">
+                            Choose CSV File
+                        </label>
+                        <input type="file" name="csv_file" accept=".csv,.txt" required
+                            class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <p class="text-xs text-gray-500 mt-1">CSV files only. File extension should be .csv or .txt</p>
+                    </div>
+                    <div class="flex space-x-4">
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            Upload and Create Event
+                        </button>
+                        <a href="{% url 'download_sample_csv' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 inline-block">
+                            Download Sample CSV
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Manual Form -->
+            <div id="manualForm" class="bg-white shadow-md rounded-lg p-6">
+                <form method="post" enctype="multipart/form-data" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Event Details -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% for field in form %}
+                        <div class="{% if field.name in 'description,venue_terms,event_terms,restrictions' %}col-span-2{% endif %}">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                            <p class="text-gray-600 text-xs italic">{{ field.help_text }}</p>
+                            {% endif %}
+                            {% if field.errors %}
+                            <p class="text-red-500 text-xs italic">{{ field.errors.0 }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Ticket Types -->
+                    <div class="border-t pt-6">
+                        <h3 class="text-lg font-semibold mb-4">Ticket Types</h3>
+                        <p class="text-sm text-gray-600 mb-4">At least one ticket type is required. You can add up to 4 ticket types.</p>
+                        
+                        <!-- Ticket Type 1 (Required) -->
+                        <div class="border-b pb-4 mb-4">
+                            <h4 class="font-medium mb-3">Ticket Type 1 (Required)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Name</label>
+                                    <input type="text" name="ticket_type_1" required 
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="e.g., Regular">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Price</label>
+                                    <input type="number" name="ticket_price_1" step="0.01" min="0" required
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
+                                    <input type="number" name="ticket_quantity_1" min="1" required
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Type 2 (Optional) -->
+                        <div class="border-b pb-4 mb-4">
+                            <h4 class="font-medium mb-3">Ticket Type 2 (Optional)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Name</label>
+                                    <input type="text" name="ticket_type_2"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="e.g., VIP">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Price</label>
+                                    <input type="number" name="ticket_price_2" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
+                                    <input type="number" name="ticket_quantity_2" min="0"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Type 3 (Optional) -->
+                        <div class="border-b pb-4 mb-4">
+                            <h4 class="font-medium mb-3">Ticket Type 3 (Optional)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Name</label>
+                                    <input type="text" name="ticket_type_3"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="e.g., Student">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Price</label>
+                                    <input type="number" name="ticket_price_3" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
+                                    <input type="number" name="ticket_quantity_3" min="0"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Type 4 (Optional) -->
+                        <div>
+                            <h4 class="font-medium mb-3">Ticket Type 4 (Optional)</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Name</label>
+                                    <input type="text" name="ticket_type_4"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="e.g., Group">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Price</label>
+                                    <input type="number" name="ticket_price_4" step="0.01" min="0"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0.00">
+                                </div>
+                                <div>
+                                    <label class="block text-gray-700 text-sm font-bold mb-2">Quantity</label>
+                                    <input type="number" name="ticket_quantity_4" min="0"
+                                        class="w-full px-3 py-2 border rounded-lg" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between mt-6">
+                        <a href="{% url 'admin_event_list' %}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                            Cancel
+                        </a>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            {{ action }} Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showForm(type) {
+    const manualForm = document.getElementById('manualForm');
+    const csvForm = document.getElementById('csvForm');
+    
+    if (type === 'manual') {
+        manualForm.classList.remove('hidden');
+        csvForm.classList.add('hidden');
+    } else {
+        manualForm.classList.add('hidden');
+        csvForm.classList.remove('hidden');
+    }
+}
+
+// Show manual form by default
+document.addEventListener('DOMContentLoaded', () => {
+    showForm('manual');
+});
+</script>
+{% endblock %}

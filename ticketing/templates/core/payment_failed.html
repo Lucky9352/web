@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Payment Not Completed{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-danger text-center">
+        <h4 class="alert-heading">Payment Not Completed</h4>
+        <p>Your payment was not completed successfully. No tickets have been booked.</p>
+        <hr>
+        {% if order_id %}
+        <p class="mb-0">Order Reference: <strong>{{ order_id }}</strong></p>
+        {% endif %}
+        
+        {% if failure_reason %}
+        <div class="mt-3 mb-3 p-3 bg-light text-left rounded">
+            <p class="mb-1"><strong>Payment Status:</strong> 
+            {% if failure_reason == 'CANCELLED' %}
+                <span class="badge bg-warning text-dark">Cancelled</span>
+            {% else %}
+                <span class="badge bg-danger">Failed</span>
+            {% endif %}
+            </p>
+            <p class="mb-0"><small>
+            {% if failure_reason == 'CANCELLED' %}
+                The payment process was cancelled.
+            {% elif failure_reason == 'FAILED' %}
+                The payment attempt failed to complete.
+            {% else %}
+                Status from payment provider: {{ failure_reason }}
+            {% endif %}
+            </small></p>
+        </div>
+        {% endif %}
+        
+        {% if error_message %}
+        <div class="mt-3 mb-3 p-3 bg-light text-left rounded">
+            <p class="text-danger mb-0"><strong>Error Details:</strong> {{ error_message }}</p>
+        </div>
+        {% endif %}
+        
+        <p class="mt-3">Common reasons for payment failure:</p>
+        <ul class="list-unstyled">
+            <li><i class="fas fa-times-circle text-danger"></i> Insufficient funds in your account</li>
+            <li><i class="fas fa-times-circle text-danger"></i> Card declined by your bank</li>
+            <li><i class="fas fa-times-circle text-danger"></i> Payment session timed out</li>
+            <li><i class="fas fa-times-circle text-danger"></i> Network connectivity issues</li>
+        </ul>
+        
+        <div class="mt-4">
+            <p class="fw-bold">What would you like to do next?</p>
+            {% if event_id %}
+            <a href="{% url 'checkout' event_id=event_id %}" class="btn btn-primary mt-2">
+                <i class="fas fa-redo"></i> Try Payment Again
+            </a>
+            {% endif %}
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary mt-2 ms-2">
+                <i class="fas fa-home"></i> Back to Homepage
+            </a>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Need Help?</h5>
+        </div>
+        <div class="card-body">
+            <p>If you're facing issues with payment, you can:</p>
+            <ul>
+                <li>Check your bank account to confirm if the amount was debited</li>
+                <li>Try a different payment method</li>
+                <li>Contact your bank if the payment was deducted but failed here</li>
+                <li>Contact our support team with your Order Reference for assistance</li>
+            </ul>
+            <p><strong>Note:</strong> If your payment was deducted but shows as failed here, please don't worry. Your money is safe and will be refunded automatically within 5-7 business days.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

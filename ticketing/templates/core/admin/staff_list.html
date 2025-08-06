@@ -1,0 +1,44 @@
+{% extends 'core/admin/base_admin.html' %}
+
+{% block admin_content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-semibold text-blue-600">Staff Management</h2>
+        <a href="{% url 'admin_create_staff' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Add New Staff</a>
+    </div>
+
+    {% if staff %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full table-auto">
+            <thead>
+                <tr class="bg-blue-50">
+                    <th class="px-4 py-2 text-left">Staff Member</th>
+                    <th class="px-4 py-2 text-left">Event</th>
+                    <th class="px-4 py-2 text-left">Role</th>
+                    <th class="px-4 py-2 text-left">Assigned At</th>
+                    <th class="px-4 py-2 text-left">Notes</th>
+                    <th class="px-4 py-2 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff_member in staff %}
+                <tr class="border-b">
+                    <td class="px-4 py-2">{{ staff_member.user.get_full_name|default:staff_member.user.email }}</td>
+                    <td class="px-4 py-2">{{ staff_member.event.title }}</td>
+                    <td class="px-4 py-2">{{ staff_member.get_role_display }}</td>
+                    <td class="px-4 py-2">{{ staff_member.assigned_at|date:"M d, Y H:i" }}</td>
+                    <td class="px-4 py-2">{{ staff_member.notes|truncatechars:50 }}</td>
+                    <td class="px-4 py-2">
+                        <a href="{% url 'admin_edit_staff' staff_member.id %}" class="text-blue-600 hover:text-blue-500 mr-2">Edit</a>
+                        <a href="{% url 'admin_delete_staff' staff_member.id %}" class="text-red-600 hover:text-red-500" onclick="return confirm('Are you sure you want to remove this staff member?')">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-600">No staff members found.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'core/admin/base_admin.html' %}
+{% block admin_content %}
+<div class="bg-white rounded-lg shadow-md p-6 max-w-xl mx-auto">
+    <h2 class="text-2xl font-semibold text-blue-600 mb-6">{{ action }} Ticket Type</h2>
+    
+    <form method="post" enctype="multipart/form-data" class="space-y-6" id="ticketTypeForm">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label for="{{ form.event.id_for_label }}" class="block text-sm font-medium text-gray-700">Event*</label>
+                {{ form.event }}
+                {% if form.event.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.event.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.type_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Ticket Type Name*</label>
+                {{ form.type_name }}
+                {% if form.type_name.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.type_name.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.price.id_for_label }}" class="block text-sm font-medium text-gray-700">Price*</label>
+                {{ form.price }}
+                {% if form.price.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.price.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.quantity.id_for_label }}" class="block text-sm font-medium text-gray-700">Quantity</label>
+                {{ form.quantity }}
+                <p class="text-gray-500 text-xs mt-1">{{ form.quantity.help_text }}</p>
+                {% if form.quantity.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.quantity.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.attendees_per_ticket.id_for_label }}" class="block text-sm font-medium text-gray-700">Attendees Per Ticket</label>
+                {{ form.attendees_per_ticket }}
+                <p class="text-gray-500 text-xs mt-1">{{ form.attendees_per_ticket.help_text }}</p>
+                {% if form.attendees_per_ticket.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.attendees_per_ticket.errors }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="md:col-span-2">
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <p class="text-red-500 text-xs mt-1">{{ form.description.errors }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Template section removed -->
+        
+        <div class="flex justify-between mt-6 pt-4 border-t">
+            {% if event %}
+                <a href="{% url 'admin_edit_event' event.id %}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Back to Event</a>
+            {% else %}
+                <a href="{% url 'admin_ticket_type_list' %}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</a>
+            {% endif %}
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">{{ action }} Ticket Type</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+

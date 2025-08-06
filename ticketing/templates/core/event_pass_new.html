@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Pass: {{ ticket.event.title }}</title>
+    <!-- Link to the local CSS file -->
+    <link rel="stylesheet" href="{% static 'css/event_pass.css' %}">
+</head>
+<body>
+
+    <!-- Main Ticket Container -->
+    <div class="ticket-container ticket-border pattern-bg">
+        
+        <!-- Header Section -->
+        <header class="ticket-header">
+            {% if ticket.event.organizer %}
+            <p class="organizer-name">{{ ticket.event.organizer.get_full_name|upper }} PRESENTS</p>
+            {% endif %}
+            <h1 class="event-title text-neon">{{ ticket.event.title|upper }}</h1>
+            <p class="event-subtitle">- {{ ticket.event.event_type|default:"The Beginning" }} -</p>
+            <p class="ticket-type">{{ ticket.ticket_type.type_name|upper }}</p>
+        </header>
+
+        <!-- Main Content Section -->
+        <main class="ticket-main">
+            <!-- Soundwave SVG Graphic -->
+            <div class="soundwave-svg">
+                <svg viewBox="0 0 245 50" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#d946ef;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    <path fill="url(#grad1)" d="M0 25 H 10 V 15 H 20 V 35 H 30 V 10 H 40 V 40 H 50 V 5 H 60 V 45 H 70 V 20 H 80 V 30 H 90 V 15 H 100 V 35 H 110 V 10 H 120 V 40 H 130 V 5 H 140 V 45 H 150 V 20 H 160 V 30 H 170 V 15 H 180 V 35 H 190 V 10 H 200 V 40 H 210 V 5 H 220 V 45 H 230 V 25 H 245"/>
+                </svg>
+            </div>
+
+            <!-- Event Details -->
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">TICKETING PARTNER</span>
+                    <span class="detail-value highlight">TAPNEX</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">DATE</span>
+                    <span class="detail-value">{{ ticket.event.date|date:"jS F Y"|upper }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">TIME</span>
+                    <span class="detail-value">{{ ticket.event.time|time:"g:i A" }} ONWARDS</span>
+                </div>
+                <div class="venue-admit-row">
+                    <div class="admit-section">
+                        <span class="detail-label">ADMIT</span>
+                        <p class="admit-value">{{ ticket.ticket_type.attendees_per_ticket }}</p>
+                    </div>
+                    <div class="venue-section">
+                        <span class="detail-label">VENUE</span>
+                        <p class="detail-value">{{ ticket.event.venue|upper }}</p>
+                        <p class="venue-address">{{ ticket.event.venue_address|truncatechars:30|upper }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashed Separator -->
+            <div class="separator"></div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section">
+                {% if qr_code_image %}
+                <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code" class="qr-code-img">
+                {% else %}
+                <img src="https://placehold.co/150x150/111827/FFFFFF?text=NO+QR" alt="QR Code Placeholder" class="qr-code-img">
+                {% endif %}
+                <p class="ticket-id">ID: {{ ticket.ticket_number }}</p>
+            </div>
+        </main>
+
+        <!-- Sponsors Section -->
+        {% if event_sponsors %}
+        <div class="sponsors-section">
+            <h3 class="sponsors-title">SPONSORS</h3>
+            <div class="sponsors-grid">
+                {% for sponsor in event_sponsors %}
+                <img src="{{ sponsor.logo.url }}" alt="{{ sponsor.name }}" class="sponsor-logo">
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Footer Section -->
+        <footer class="ticket-footer">
+            <p class="footer-text">This ticket is non-transferable. Management reserves the right of admission.</p>
+        </footer>
+    </div>
+
+</body>
+</html>

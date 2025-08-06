@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Volunteer Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-blue-600 mb-8">Volunteer Dashboard</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Volunteer Profile Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Your Profile</h2>
+                <div class="space-y-2 text-gray-600">
+                    <p><span class="font-medium">Name:</span> {{ user.first_name }} {{ user.last_name }}</p>
+                    <p><span class="font-medium">Email:</span> {{ user.email }}</p>
+                    <p><span class="font-medium">Role:</span> {{ user.role }}</p>
+                    <p><span class="font-medium">Last Login:</span> {{ user.last_login|date:"M d, Y H:i" }}</p>
+                </div>
+            </div>
+
+            <!-- Assigned Events Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Assigned Events</h2>
+                <div class="space-y-4">
+                    {% if assigned_events %}
+                        {% for event in assigned_events %}
+                            <div class="border-b pb-2">
+                                <p class="font-medium">{{ event.title }}</p>
+                                <p class="text-sm text-gray-500">{{ event.date }} at {{ event.time }}</p>
+                                <p class="text-sm text-gray-500">Venue: {{ event.venue }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No events assigned yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Quick Actions</h2>
+                <ul class="space-y-2">
+                    <li><a href="#" class="text-blue-600 hover:text-blue-500">View Schedule</a></li>
+                    <li><a href="#" class="text-blue-600 hover:text-blue-500">Update Availability</a></li>
+                    <li><a href="{% url 'volunteer_scan_tickets' %}" class="text-blue-600 hover:text-blue-500 font-bold">Scan Tickets</a></li>
+                    <li><a href="#" class="text-blue-600 hover:text-blue-500">Check In Attendees</a></li>
+                    <li>
+                        <form method="post" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-700">Logout</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,236 @@
+{% extends 'base.html' %}
+{% load ticketing_extras %}
+
+{% block title %}Checkout - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div class="p-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+
+                <form method="POST" action="{% url 'checkout_success' event.id %}" class="space-y-8">
+                    {% csrf_token %}
+
+                    <!-- Customer Information -->
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Customer Information</h2>
+                        <div class="grid grid-cols-1 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Name</label>
+                                <div class="mt-1 text-gray-900">{{ user.get_full_name }}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Email</label>
+                                <div class="mt-1 text-gray-900">{{ user.email }}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Mobile Number</label>
+                                <div class="mt-1 text-gray-900">{{ user.mobile_number }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="space-y-4">
+                                {% for ticket_type in ticket_types %}
+                                {% if ticket_type.quantity > 0 %}
+                                <div class="flex justify-between">
+                                    <span>{{ ticket_type.type_name }} ({{ ticket_type.quantity }}x)
+                                        {% with attendees_per_ticket=ticket_type.attendees_per_ticket|default:1 %}
+                                        <span class="text-sm text-gray-500"> 
+                                            - {{ attendees_per_ticket }} attendee{% if attendees_per_ticket > 1 %}s{% endif %} per ticket
+                                            (Total: {{ ticket_type.quantity|multiply:attendees_per_ticket }} attendees)
+                                        </span>
+                                        {% endwith %}
+                                    </span>
+                                    <span>₹{{ ticket_type.total }}</span>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+
+                                <div class="border-t pt-4">
+                                    <!-- Promo Code Section -->
+                                    <div class="mb-4">
+                                        <label for="promo_code" class="block text-sm font-medium text-gray-700 mb-2">Promo Code</label>
+                                        <div class="flex space-x-2">
+                                            <input type="text" name="promo_code" id="promo_code" 
+                                                   class="flex-grow px-3 py-2 border rounded-md" 
+                                                   placeholder="Enter promo code"
+                                                   value="{{ promo_code|default:'' }}">
+                                            <button type="button" id="validate_promo_btn"
+                                                    class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">
+                                                Validate
+                                            </button>
+                                        </div>
+                                        <div id="promo_validation_result" class="mt-2 text-sm"></div>
+                                        {% if messages %}
+                                            {% for message in messages %}
+                                                <p class="mt-2 text-sm {% if message.tags == 'error' %}text-red-600{% else %}text-green-600{% endif %}">
+                                                    {{ message }}
+                                                </p>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Order Summary -->
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between text-gray-600">
+                                            <span>Subtotal</span>
+                                            <span id="subtotal_display">₹{{ subtotal }}</span>
+                                        </div>
+                                        <div class="flex justify-between text-gray-600">
+                                            <span>Total Attendees</span>
+                                            <span class="font-medium">{{ total_attendees }}</span>
+                                        </div>
+                                        <div id="discount_row" class="flex justify-between text-green-600" {% if not discount %}style="display: none;"{% endif %}>
+                                            <span>Discount</span>
+                                            <span id="discount_display">-₹{{ discount|default:'0.00' }}</span>
+                                        </div>
+                                        <div class="flex justify-between font-semibold text-lg">
+                                            <span>Total</span>
+                                            <span id="total_display">₹{{ total }}</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Complete Booking Button -->
+                                    <div class="mt-6">
+                                        <button type="submit" name="complete_booking" value="1" 
+                                                class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700">
+                                            Complete Booking
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Hidden inputs will be added by JavaScript when promo code is validated -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const promoCodeInput = document.getElementById('promo_code');
+        const validatePromoBtn = document.getElementById('validate_promo_btn');
+        const promoValidationResult = document.getElementById('promo_validation_result');
+        const subtotalDisplay = document.getElementById('subtotal_display');
+        const discountRow = document.getElementById('discount_row');
+        const discountDisplay = document.getElementById('discount_display');
+        const totalDisplay = document.getElementById('total_display');
+        
+        // Get initial values from the template
+        let subtotal = parseFloat("{{ subtotal|default:0 }}");
+        let currentTotal = parseFloat("{{ total|default:subtotal }}");
+        let currentDiscount = parseFloat("{{ discount|default:0 }}");
+        
+        // If there's already a promo code value, show discount row
+        if (promoCodeInput.value.trim() !== '' && currentDiscount > 0) {
+            discountRow.style.display = '';
+            discountDisplay.textContent = `-₹${currentDiscount.toFixed(2)}`;
+        }
+        
+        validatePromoBtn.addEventListener('click', function() {
+            const promoCode = promoCodeInput.value.trim();
+            if (!promoCode) {
+                promoValidationResult.innerHTML = '<span class="text-red-600">Please enter a promo code</span>';
+                return;
+            }
+            
+            // Show loading state
+            validatePromoBtn.disabled = true;
+            validatePromoBtn.textContent = 'Validating...';
+            promoValidationResult.innerHTML = '<span class="text-blue-600">Validating promo code...</span>';
+            
+            // Make AJAX request to validate promo code
+            fetch(`/api/validate-promo/${encodeURIComponent(promoCode)}/?event_id={{ event.id }}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.valid) {
+                        // Update UI with discount information
+                        currentDiscount = data.discount;
+                        currentTotal = data.final_total;
+                        
+                        // Update display elements
+                        discountDisplay.textContent = `-₹${currentDiscount.toFixed(2)}`;
+                        discountRow.style.display = '';
+                        totalDisplay.textContent = `₹${currentTotal.toFixed(2)}`;
+                        
+                        promoValidationResult.innerHTML = `<span class="text-green-600">✓ Valid promo code! You save ₹${currentDiscount.toFixed(2)}</span>`;
+                        
+                        // Create hidden input to store promo code info for form submission
+                        let promoInput = document.querySelector('input[name="applied_promo_code"]');
+                        if (!promoInput) {
+                            promoInput = document.createElement('input');
+                            promoInput.type = 'hidden';
+                            promoInput.name = 'applied_promo_code';
+                            document.querySelector('form').appendChild(promoInput);
+                        }
+                        promoInput.value = promoCode;
+                        
+                        let discountInput = document.querySelector('input[name="applied_discount"]');
+                        if (!discountInput) {
+                            discountInput = document.createElement('input');
+                            discountInput.type = 'hidden';
+                            discountInput.name = 'applied_discount';
+                            document.querySelector('form').appendChild(discountInput);
+                        }
+                        discountInput.value = currentDiscount;
+                        
+                        let finalTotalInput = document.querySelector('input[name="final_total"]');
+                        if (!finalTotalInput) {
+                            finalTotalInput = document.createElement('input');
+                            finalTotalInput.type = 'hidden';
+                            finalTotalInput.name = 'final_total';
+                            document.querySelector('form').appendChild(finalTotalInput);
+                        }
+                        finalTotalInput.value = currentTotal;
+                    } else {
+                        // Reset to original values
+                        currentDiscount = 0;
+                        currentTotal = subtotal;
+                        
+                        // Update display elements
+                        discountRow.style.display = 'none';
+                        totalDisplay.textContent = `₹${subtotal.toFixed(2)}`;
+                        
+                        promoValidationResult.innerHTML = `<span class="text-red-600">✗ ${data.message}</span>`;
+                        
+                        // Remove promo code from form submission
+                        const promoInput = document.querySelector('input[name="applied_promo_code"]');
+                        if (promoInput) promoInput.value = '';
+                        
+                        const discountInput = document.querySelector('input[name="applied_discount"]');
+                        if (discountInput) discountInput.value = '0';
+                        
+                        const finalTotalInput = document.querySelector('input[name="final_total"]');
+                        if (finalTotalInput) finalTotalInput.value = subtotal;
+                    }
+                })
+                .catch(error => {
+                    promoValidationResult.innerHTML = '<span class="text-red-600">Error validating promo code. Please try again.</span>';
+                })
+                .finally(() => {
+                    // Reset button state
+                    validatePromoBtn.disabled = false;
+                    validatePromoBtn.textContent = 'Validate';
+                });
+        });
+        
+        // Trigger validation on Enter key in promo input field
+        promoCodeInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                validatePromoBtn.click();
+            }
+        });
+    });
+</script>
+{% endblock %}

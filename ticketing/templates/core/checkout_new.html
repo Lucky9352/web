@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Checkout - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Checkout Summary for {{ event.title }}</h3>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Your Tickets</h5>
+                    <ul class="list-group list-group-flush">
+                        {% for item in ticket_types %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ item.type_name }}</strong> (x{{ item.quantity }})
+                                <br>
+                                <small class="text-muted">{{ item.attendees_per_ticket }} attendee(s) per ticket</small>
+                            </div>
+                            <span>₹{{ item.subtotal|floatformat:2 }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <h5>Subtotal</h5>
+                        <h5 id="subtotal">₹{{ subtotal|floatformat:2 }}</h5>
+                    </div>
+                    <div class="d-flex justify-content-between text-success">
+                        <h5 id="discount-text">Discount</h5>
+                        <h5 id="discount-amount">- ₹{{ discount|floatformat:2 }}</h5>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <h4>Total</h4>
+                        <h4 id="final-total">₹{{ total|floatformat:2 }}</h4>
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <button id="pay-btn" class="btn btn-primary btn-lg btn-block">Pay with Cashfree</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Promo Code</h5>
+                    <form id="promo-form" method="POST" action="{% url 'checkout' event_id=event.id %}">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="Enter Promo Code" id="promo-code-input" name="promo_code" value="{{ promo_code }}">
+                            <div class="input-group-append">
+                                <button class="btn btn-secondary" type="button" id="apply-promo-btn">Apply</button>
+                            </div>
+                        </div>
+                        <small id="promo-message" class="form-text"></small>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const cashfree = new Cashfree({
+        mode: "sandbox" // Use "production" for live payments
+    });
+
+    // --- PROMO CODE VALIDATION LOGIC ---
+    document.getElementById('apply-promo-btn').addEventListener('click', function() {
+        const promoCode = document.getElementById('promo-code-input').value.trim();
+        const eventId = "{{ event.id }}";
+        const promoMessage = document.getElementById('promo-message');
+
+        if (!promoCode) {
+            promoMessage.textContent = 'Please enter a promo code.';
+            promoMessage.className = 'form-text text-danger';
+            return;
+        }
+
+        const validationUrl = `/api/validate-promo/${encodeURIComponent(promoCode)}/?event_id=${eventId}`;
+
+        fetch(validationUrl)
+            .then(response => response.json())
+            .then(data => {
+                if (data.valid) {
+                    promoMessage.textContent = data.message;
+                    promoMessage.className = 'form-text text-success';
+                    document.getElementById('discount-amount').textContent = `- ₹${data.discount.toFixed(2)}`;
+                    document.getElementById('final-total').textContent = `₹${data.final_total.toFixed(2)}`;
+                } else {
+                    promoMessage.textContent = data.message;
+                    promoMessage.className = 'form-text text-danger';
+                    // Reset to original subtotal if promo is invalid
+                    document.getElementById('discount-amount').textContent = `- ₹0.00`;
+                    document.getElementById('final-total').textContent = `₹{{ subtotal|floatformat:2 }}`;
+                }
+            })
+            .catch(error => {
+                promoMessage.textContent = 'An error occurred while validating the promo code.';
+                promoMessage.className = 'form-text text-danger';
+                console.error('Promo validation error:', error);
+            });
+    });
+
+
+    // --- CASHFREE PAYMENT LOGIC ---
+    document.getElementById("pay-btn").addEventListener("click", function() {
+        this.disabled = true;
+        this.innerHTML = 'Processing...';
+
+        fetch("{% url 'create_cashfree_order' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw new Error(err.error || 'Network response was not ok'); });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.payment_session_id) {
+                cashfree.checkout({
+                    paymentSessionId: data.payment_session_id
+                });
+                 this.disabled = false;
+                 this.innerHTML = 'Pay with Cashfree';
+            } else {
+                console.error('Error creating order:', data.error);
+                alert('Error: ' + data.error);
+                this.disabled = false;
+                this.innerHTML = 'Pay with Cashfree';
+            }
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+            alert('An unexpected error occurred: ' + error.message);
+            document.getElementById("pay-btn").disabled = false;
+            document.getElementById("pay-btn").innerHTML = 'Pay with Cashfree';
+        });
+    });
+});
+</script>
+{% endblock %}

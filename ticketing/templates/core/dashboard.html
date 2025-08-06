@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - My Project{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-blue-600 mb-8">Dashboard</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- User Profile Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Your Profile</h2>
+                <div class="space-y-2 text-gray-600">
+                    <p><span class="font-medium">Name:</span> {{ user.first_name }} {{ user.last_name }}</p>
+                    <p><span class="font-medium">Email:</span> {{ user.email }}</p>
+                    {% if user.mobile_number %}
+                        <p><span class="font-medium">Mobile:</span> {{ user.mobile_number }}</p>
+                    {% endif %}
+                    <p><span class="font-medium">Last Login:</span> {{ user.last_login|date:"M d, Y H:i" }}</p>
+                    <p><span class="font-medium">Member Since:</span> {{ user.date_joined|date:"M d, Y" }}</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Quick Actions</h2>
+                <ul class="space-y-2">
+                    <li><a href="{% url 'update_profile' %}" class="text-blue-600 hover:text-blue-500">Update Profile</a></li>
+                    <p class="text-sm text-gray-500">Manage your personal information</p>
+                    <li><a href="{% url 'password_reset' %}" class="text-blue-600 hover:text-blue-500">Change Password</a></li>
+                    <p class="text-sm text-gray-500">Update your account security</p>
+                </ul>
+            </div>
+
+            <!-- Recent Activity Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Recent Activity</h2>
+                <div class="text-gray-600">
+                    {% if user.last_login %}
+                        <p>Last active: {{ user.last_login|timesince }} ago</p>
+                    {% else %}
+                        <p>No recent activity</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

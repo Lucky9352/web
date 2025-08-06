@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load ticketing_extras %}
+
+{% block title %}Welcome to TapNex Tickets{% endblock %}
+
+{% block content %}
+    <div class="min-h-screen bg-white">
+        <div class="max-w-4xl mx-auto py-12 px-4">
+            <!-- Hero Section -->
+            <div class="text-center mb-16">
+                <h1 class="text-4xl font-bold text-blue-600 mb-4">Welcome to My Project</h1>
+                <p class="text-gray-600 text-lg">Your gateway to modern web solutions</p>
+            </div>
+
+            <!-- Auth Buttons -->
+            {% if not user.is_authenticated %}
+            <div class="flex justify-center space-x-4 mb-16">
+                <a href="{% url 'login' %}" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    Login
+                </a>
+                <a href="{% url 'signup' %}" class="bg-white text-blue-600 px-6 py-3 rounded-lg border border-blue-600 hover:bg-blue-50 transition-colors duration-200">
+                    Sign Up
+                </a>
+            </div>
+            {% endif %}
+
+            <!-- Events Section -->
+            <h2 class="text-3xl font-bold text-gray-800 mb-8">Upcoming Events</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                {% for event_data in events %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    {% if event_data.event.get_banner_image_url %}
+                        <img src="{{ event_data.event.get_banner_image_url }}" alt="{{ event_data.event.title }}" class="w-full h-48 object-cover">
+                    {% elif event_data.event.banner_image %}
+                        <img src="{{ event_data.event.banner_image.url }}" alt="{{ event_data.event.title }}" class="w-full h-48 object-cover">
+                    {% endif %}
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ event_data.event.title }}</h3>
+                        <p class="text-gray-600 mb-4">{{ event_data.event.short_description }}</p>
+                        <div class="mb-4">
+                            <div class="text-gray-700"><i class="fas fa-calendar"></i> {{ event_data.event.date }}</div>
+                            <div class="text-gray-700"><i class="fas fa-map-marker-alt"></i> {{ event_data.event.venue }}</div>
+                            <div class="text-gray-700"><i class="fas fa-ticket-alt"></i> 
+                                {% if event_data.min_price %}
+                                    Starting from ₹{{ event_data.min_price }}
+                                {% else %}
+                                    Tickets coming soon
+                                {% endif %}
+                            </div>
+                        </div>
+                        <a href="{% url 'event_detail' event_data.event.id %}" class="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-3 text-center text-gray-600">
+                    No upcoming events at the moment.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Refunds & Cancellations Policy - TapNex Ticketing System{% endblock %}
+
+{% block content %}
+<div class="bg-gray-100 py-12">
+    <div class="container mx-auto px-4 max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mb-10 text-blue-600">Refunds & Cancellations Policy</h1>
+        
+        <div class="bg-white shadow-md rounded-lg p-8">
+            <div class="prose max-w-none">
+                <p class="text-gray-600 mb-6">Effective Date: July 31, 2025</p>
+                
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold text-blue-700 mb-4">1. General Policy</h2>
+                    <p class="mb-4">
+                        All ticket sales are final and non-refundable for user-initiated reasons (e.g., change of plans, personal emergencies).
+                    </p>
+                </section>
+                
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold text-blue-700 mb-4">2. Event-Initiated Changes</h2>
+                    <p class="mb-4">
+                        For event cancellations, postponements, or significant modifications, refunds are subject to the specific organizer's policy.
+                    </p>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+                        <p class="text-blue-700">
+                            <strong>Note:</strong> In case of event changes, the event organizer will communicate directly with ticket holders via the registered email address.
+                        </p>
+                    </div>
+                </section>
+                
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold text-blue-700 mb-4">3. Denied Entry</h2>
+                    <p class="mb-4">
+                        No refunds are provided for denied entry due to:
+                    </p>
+                    <ul class="list-disc pl-6 space-y-2 mb-4">
+                        <li>Late arrival</li>
+                        <li>Failure to produce a valid ticket/ID</li>
+                        <li>Violation of event rules</li>
+                    </ul>
+                </section>
+                
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold text-blue-700 mb-4">4. Payment Issues</h2>
+                    <p class="mb-4">
+                        For duplicate or failed payments where a charge occurred without a ticket, users must contact support within 24 hours. After verification, a ticket will be reissued or a refund will be processed within 5-10 working days.
+                    </p>
+                </section>
+                
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold text-blue-700 mb-4">5. Ticket Transferability</h2>
+                    <p class="mb-4">
+                        Tickets are generally non-transferable and non-exchangeable unless specified by the organizer.
+                    </p>
+                </section>
+                
+                <section class="mb-8">
+                    <h2 class="text-2xl font-semibold text-blue-700 mb-4">6. Policy Updates</h2>
+                    <p class="mb-4">
+                        This policy is subject to change, with the latest version available on the website.
+                    </p>
+                </section>
+                
+                <div class="border-t border-gray-200 pt-6 mt-8">
+                    <p class="text-sm text-gray-600">
+                        If you have any questions about our refund and cancellation policies, please contact our support team at 
+                        <a href="mailto:info@tapnex.tech" class="text-blue-600 hover:underline">info@tapnex.tech</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

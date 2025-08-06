@@ -1,0 +1,14 @@
+{% extends 'core/admin/base_admin.html' %}
+{% block admin_content %}
+<div class="bg-white rounded-lg shadow-md p-6 max-w-xl mx-auto">
+    <h2 class="text-2xl font-semibold text-blue-600 mb-6">{{ action }} Staff</h2>
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="flex justify-between mt-6">
+            <a href="{% url 'admin_staff_list' %}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">Cancel</a>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">{{ action }} Staff</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

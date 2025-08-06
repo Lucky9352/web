@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load ticketing_extras %}
+
+{% block title %}Customer Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-blue-600 mb-8">Customer Dashboard</h1>
+        <!-- Profile and Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Customer Profile Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Your Profile</h2>
+                <div class="space-y-2 text-gray-600">
+                    <p><span class="font-medium">Name:</span> {{ user.first_name }} {{ user.last_name }}</p>
+                    <p><span class="font-medium">Email:</span> {{ user.email }}</p>
+                    <p><span class="font-medium">Mobile:</span> {{ user.mobile_number }}</p>
+                    <p><span class="font-medium">Last Login:</span> {{ user.last_login|date:"M d, Y H:i" }}</p>
+                </div>
+            </div>
+            <!-- My Tickets Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">My Tickets</h2>
+                <div class="space-y-4">
+                    {% if tickets %}
+                        {% for ticket in tickets|slice:":3" %}
+                            <div class="border-b pb-2">
+                                <p class="font-medium">{{ ticket.event.title }}</p>
+                                <p class="text-sm text-gray-500">{{ ticket.event.date }} at {{ ticket.event.time }}</p>
+                                <p class="text-sm text-gray-500">Ticket #: {{ ticket.ticket_number }}</p>
+                                <p class="text-sm text-gray-500">Type: {{ ticket.ticket_type.type_name }}</p>
+                            </div>
+                        {% endfor %}
+                        {% if tickets.count > 3 %}
+                            <div class="mt-2 text-center">
+                                <a href="{% url 'my_tickets' %}" class="text-blue-600 hover:text-blue-800">
+                                    View all {{ tickets.count }} tickets →
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <p>No tickets purchased yet.</p>
+                        <div class="mt-3">
+                            <a href="{% url 'event_list' %}" class="bg-blue-600 text-white px-3 py-1 rounded text-sm">Browse Events</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <!-- Quick Actions Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Quick Actions</h2>
+                <ul class="space-y-2">
+                    <li><a href="{% url 'event_list' %}" class="text-blue-600 hover:text-blue-500">Browse Events</a></li>
+                    <li><a href="{% url 'my_tickets' %}" class="text-blue-600 hover:text-blue-500">View My Tickets</a></li>
+                    <li>
+                        <form method="post" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-700">Logout</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <!-- Available Events Section -->
+        <div class="mt-8">
+            <h2 class="text-2xl font-semibold text-blue-600 mb-6">Available Events</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {% for event_data in events %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    {% if event_data.event.get_banner_image_url %}
+                        <img src="{{ event_data.event.get_banner_image_url }}" alt="{{ event_data.event.title }}" class="w-full h-48 object-cover">
+                    {% elif event_data.event.banner_image %}
+                        <img src="{{ event_data.event.banner_image.url }}" alt="{{ event_data.event.title }}" class="w-full h-48 object-cover">
+                    {% endif %}
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ event_data.event.title }}</h3>
+                        <div class="mb-4">
+                            <p class="text-gray-600">{{ event_data.event.description|truncatewords:30 }}</p>
+                            <p class="text-sm text-gray-500 mt-2">Starting from ₹{{ event_data.min_price }}</p>
+                            <a href="{% url 'book_ticket' event_data.event.id %}" class="mt-4 block w-full text-center bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors duration-200">
+                                Book Now
+                            </a>
+                        </div>
+                            <div class="text-gray-700 mb-2"><i class="fas fa-calendar-alt mr-2"></i> {{ event_data.event.date }}</div>
+                            <div class="text-gray-700 mb-2"><i class="fas fa-map-marker-alt mr-2"></i> {{ event_data.event.venue }}</div>
+                            <div class="text-gray-700"><i class="fas fa-ticket-alt mr-2"></i> 
+                                {% if event_data.min_price %}
+                                    Starting from ₹{{ event_data.min_price }}
+                                {% else %}
+                                    Tickets coming soon
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-3 text-center text-gray-600">
+                    No upcoming events at the moment.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedEventId = null;
+    let selectedTicketType = null;
+    let selectedTicketData = null;
+    let selectedQuantity = 1;
+
+    function openBookingModal(eventId) {
+        selectedEventId = eventId;
+        selectedTicketType = null;
+        selectedTicketData = null;
+        selectedQuantity = 1;
+        document.getElementById('bookingModal').classList.remove('hidden');
+        document.getElementById('attendeesSummary').classList.add('hidden');
+        
+        // Fetch ticket types for this event
+        fetch(`/api/event/${eventId}/ticket-types/`)
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('ticketTypeContainer');
+                container.innerHTML = '';
+                data.ticket_types.forEach(type => {
+                    const typeDiv = document.createElement('div');
+                    typeDiv.className = 'ticket-type border rounded-lg p-4 cursor-pointer hover:border-blue-600';
+                    typeDiv.id = `ticket-type-${type.id}`;
+                    typeDiv.onclick = () => selectTicketType(type);
+                    typeDiv.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="text-lg font-semibold">${type.type_name || 'Standard Ticket'}</h4>
+                                <p class="text-gray-600 text-sm mt-1">${type.description || ''}</p>
+                                <p class="text-sm text-gray-500 mt-1">Attendees per ticket: ${type.attendees_per_ticket || 1}</p>
+                                <p class="text-sm text-gray-500">Available tickets: ${type.available_quantity || 0}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xl font-bold text-blue-600">₹${type.price || 0}</p>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(typeDiv);
+                });
+            });
+    }
+
+    function closeBookingModal() {
+        document.getElementById('bookingModal').classList.add('hidden');
+        document.getElementById('attendeesSummary').classList.add('hidden');
+        selectedEventId = null;
+        selectedTicketType = null;
+        selectedTicketData = null;
+        selectedQuantity = 1;
+    }
+
+    function updateQuantity(ticketTypeId, change) {
+        const quantityElement = document.getElementById(`quantity-${ticketTypeId}`);
+        let currentQuantity = parseInt(quantityElement.textContent);
+        let newQuantity = currentQuantity + change;
+        // Get the max available tickets for this type
+        const ticketTypeElement = document.getElementById(`ticket-type-${ticketTypeId}`);
+        const availableText = ticketTypeElement.querySelector('.text-gray-500').textContent;
+        const maxAvailable = parseInt(availableText.split(' ')[0]);
+        if (newQuantity >= 1 && newQuantity <= maxAvailable) {
+            quantityElement.textContent = newQuantity;
+            if (selectedTicketType === ticketTypeId) {
+                selectedQuantity = newQuantity;
+            }
+        }
+    }
+
+    function selectTicketType(eventId) {
+        window.location.href = `/events/${eventId}/book/`;
+    }
+
+    function selectTicketType(ticketType) {
+        selectedTicketType = ticketType.id;
+        selectedTicketData = ticketType;
+        selectedQuantity = 1;
+
+        // Update visual selection
+        const allTypes = document.querySelectorAll('.ticket-type');
+        allTypes.forEach(type => {
+            type.classList.remove('border-blue-600', 'border-2');
+            type.classList.add('border');
+        });
+        const selectedType = document.getElementById(`ticket-type-${ticketType.id}`);
+        selectedType.classList.remove('border');
+        selectedType.classList.add('border-blue-600', 'border-2');
+
+        // Show quantity selector
+        const summaryDiv = document.getElementById('attendeesSummary');
+        summaryDiv.classList.remove('hidden');
+        
+        updateSummary();
+
+        // Add quantity selector after the selected ticket
+        const quantitySelector = document.createElement('div');
+        quantitySelector.className = 'flex justify-between items-center mt-4 pt-3 border-t';
+        quantitySelector.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <button onclick="event.stopPropagation(); updateQuantity(-1)" 
+                        class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-lg font-medium">-</button>
+                <span id="quantity-display" class="font-semibold text-lg">${selectedQuantity}</span>
+                <button onclick="event.stopPropagation(); updateQuantity(1)" 
+                        class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-lg font-medium">+</button>
+            </div>
+            <div class="text-sm text-gray-500">
+                Max: ${ticketType.available_quantity}
+            </div>
+        `;
+
+        // Remove any existing quantity selector
+        const existingSelector = selectedType.querySelector('.flex.justify-between');
+        if (existingSelector) {
+            existingSelector.remove();
+        }
+        selectedType.appendChild(quantitySelector);
+    }
+
+    function updateSummary() {
+        if (selectedTicketData) {
+            const totalAttendees = selectedQuantity * selectedTicketData.attendees_per_ticket;
+            const totalAmount = selectedQuantity * selectedTicketData.price;
+
+            document.getElementById('selectedTicketName').textContent = selectedTicketData.type_name;
+            document.getElementById('selectedTicketQuantity').textContent = selectedQuantity;
+            document.getElementById('totalAttendees').textContent = totalAttendees;
+            document.getElementById('totalAmount').textContent = totalAmount;
+        }
+    }
+
+    function updateQuantity(change) {
+        if (!selectedTicketData) return;
+
+        const newQuantity = selectedQuantity + change;
+        if (newQuantity >= 1 && newQuantity <= selectedTicketData.available_quantity) {
+            selectedQuantity = newQuantity;
+            document.getElementById('quantity-display').textContent = selectedQuantity;
+            updateSummary();
+        }
+    }
+
+    function proceedToCheckout() {
+        window.location.href = `/events/${selectedEventId}/book/`;
+    }
+</script>
+{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

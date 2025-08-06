@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block title %}Organizer Dashboard{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-white">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-blue-600 mb-8">Organizer Dashboard</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Organizer Profile Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Your Profile</h2>
+                <div class="space-y-2 text-gray-600">
+                    <p><span class="font-medium">Name:</span> {{ user.first_name }} {{ user.last_name }}</p>
+                    <p><span class="font-medium">Email:</span> {{ user.email }}</p>
+                    <p><span class="font-medium">Role:</span> {{ user.role }}</p>
+                    <p><span class="font-medium">Last Login:</span> {{ user.last_login|date:"M d, Y H:i" }}</p>
+                </div>
+            </div>
+
+            <!-- Events Overview Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Your Events</h2>
+                <div class="space-y-4">
+                    {% if events %}
+                        {% for event in events %}
+                            <div class="border-b pb-2">
+                                <p class="font-medium">{{ event.title }}</p>
+                                <p class="text-sm text-gray-500">{{ event.date }} at {{ event.time }}</p>
+                                <p class="text-sm text-gray-500">Tickets Sold: {{ event.tickets.count }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>No events created yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="bg-blue-50 p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold text-blue-600 mb-4">Quick Actions</h2>
+                <ul class="space-y-2">
+                    <li><a href="{% url 'create_event' %}" class="text-blue-600 hover:text-blue-500">Create New Event</a></li>
+                    <li><a href="#" class="text-blue-600 hover:text-blue-500">View My Events</a></li>
+                    <li><a href="#" class="text-blue-600 hover:text-blue-500">Manage Tickets</a></li>
+                    <li><a href="{% url 'organizer_promo_code_analytics' %}" class="text-blue-600 hover:text-blue-500">Promo Code Analytics</a></li>
+                    <li>
+                        <form method="post" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-red-600 hover:text-red-700">Logout</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

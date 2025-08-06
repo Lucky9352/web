@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100">
+    <!-- Admin Navigation -->
+    <nav class="bg-blue-600 text-white px-6 py-3">
+        <div class="container mx-auto">
+            <div class="flex justify-between items-center">
+                <div class="flex space-x-4 items-center">
+                    <a href="{% url 'admin_dashboard' %}" class="text-xl font-bold">Admin Panel</a>
+                </div>
+                <div class="flex space-x-4">
+                    <a href="{% url 'admin_dashboard' %}" class="hover:text-blue-200">Dashboard</a>
+                    <a href="{% url 'admin_event_list' %}" class="hover:text-blue-200">Events</a>
+                    <a href="{% url 'admin_user_list' %}" class="hover:text-blue-200">Users</a>
+                    <a href="{% url 'admin_ticket_list' %}" class="hover:text-blue-200">Tickets</a>
+                    <a href="{% url 'admin_promo_code_list' %}" class="hover:text-blue-200">Promo Codes</a>
+                    <a href="{% url 'admin_staff_list' %}" class="hover:text-blue-200">Staff</a>
+                    <a href="{% url 'admin_ticket_type_list' %}" class="hover:text-blue-200">Ticket Types</a>
+
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span>{{ user.email }}</span>
+                    <form method="post" action="{% url 'logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="hover:text-blue-200">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container mx-auto px-6 py-8">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block admin_content %}{% endblock %}
+    </div>
+</div>
+{% endblock %}

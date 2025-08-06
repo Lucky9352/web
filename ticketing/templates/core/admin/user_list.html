@@ -1,0 +1,62 @@
+{% extends 'core/admin/base_admin.html' %}
+
+{% block admin_content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-semibold text-blue-600">User Management</h2>
+        <a href="{% url 'admin_create_user' %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Add New User</a>
+    </div>
+
+    {% if users %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full table-auto">
+            <thead>
+                <tr class="bg-blue-50">
+                    <th class="px-4 py-2 text-left">Email</th>
+                    <th class="px-4 py-2 text-left">Name</th>
+                    <th class="px-4 py-2 text-left">Mobile</th>
+                    <th class="px-4 py-2 text-left">Role</th>
+                    <th class="px-4 py-2 text-left">Date Joined</th>
+                    <th class="px-4 py-2 text-left">Last Login</th>
+                    <th class="px-4 py-2 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="px-4 py-2">{{ user.email }}</td>
+                    <td class="px-4 py-2">{{ user.get_full_name|default:"-" }}</td>
+                    <td class="px-4 py-2">{{ user.mobile_number|default:"-" }}</td>
+                    <td class="px-4 py-2">
+                        {% if user.role == 'ADMIN' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-full">{{ user.get_role_display }}</span>
+                        {% elif user.role == 'ORGANIZER' %}
+                            <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded-full">{{ user.get_role_display }}</span>
+                        {% elif user.role == 'VOLUNTEER' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">{{ user.get_role_display }}</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">{{ user.get_role_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">{{ user.date_joined|date:"M d, Y" }}</td>
+                    <td class="px-4 py-2">{{ user.last_login|date:"M d, Y H:i"|default:"-" }}</td>
+                    <td class="px-4 py-2 space-x-2">
+                        <a href="{% url 'admin_edit_user' user.id %}" class="text-blue-600 hover:text-blue-500 mr-2">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        {% if user.id != request.user.id %}
+                        <a href="{% url 'admin_delete_user' user.id %}" class="text-red-600 hover:text-red-500" onclick="return confirm('Are you sure you want to delete this user?')">
+                            <i class="fas fa-trash"></i> Delete
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="text-gray-600">No users found.</p>
+    {% endif %}
+</div>
+{% endblock %}

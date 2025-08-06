@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load ticketing_extras %}
+
+{% block title %}{{ event.title }} - Event Details{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% if messages %}
+        <div class="mb-8">
+            {% for message in messages %}
+            <div class="p-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Event Details -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+            {% if event.get_banner_image_url %}
+                <img src="{{ event.get_banner_image_url }}" alt="{{ event.title }}" class="w-full h-96 object-cover">
+            {% elif event.banner_image %}
+                <img src="{{ event.banner_image.url }}" alt="{{ event.title }}" class="w-full h-96 object-cover">
+            {% endif %}
+            
+            <div class="p-8">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">{{ event.title }}</h1>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <!-- Event Description -->
+                        <div class="mb-8">
+                            <h2 class="text-2xl font-semibold text-gray-900 mb-4">About This Event</h2>
+                            <div class="prose max-w-none">
+                                {{ event.description|linebreaks }}
+                            </div>
+                        </div>
+                        
+                        <!-- Event Date, Time, Location -->
+                        <div class="mb-8">
+                            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Date and Location</h2>
+                            <div class="space-y-4">
+                                <div class="flex items-center text-gray-700">
+                                    <i class="fas fa-calendar mr-3"></i>
+                                    <span>{{ event.date }} {% if event.end_date %}- {{ event.end_date }}{% endif %}</span>
+                                </div>
+                                <div class="flex items-center text-gray-700">
+                                    <i class="fas fa-clock mr-3"></i>
+                                    <span>{{ event.time }} {% if event.end_time %}- {{ event.end_time }}{% endif %}</span>
+                                </div>
+                                <div class="flex items-center text-gray-700">
+                                    <i class="fas fa-map-marker-alt mr-3"></i>
+                                    <span>{{ event.venue }}</span>
+                                </div>
+                                {% if event.venue_address %}
+                                <div class="flex items-center text-gray-700">
+                                    <i class="fas fa-location-arrow mr-3"></i>
+                                    <span>{{ event.venue_address }}</span>
+                                </div>
+                                {% endif %}
+                                {% if event.venue_map_link %}
+                                <div class="mt-2">
+                                    <a href="{{ event.venue_map_link }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                                        View on Map <i class="fas fa-external-link-alt ml-1"></i>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h2 class="text-2xl font-semibold text-gray-900 mb-6">Ticket Information</h2>
+                        
+                        <div class="space-y-6">
+                            {% for ticket_info in ticket_types %}
+                            <div class="bg-white p-4 rounded-lg shadow-sm">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-medium text-lg">{{ ticket_info.type.type_name }}</span>
+                                    <span class="text-xl font-bold">₹{{ ticket_info.type.price }}</span>
+                                </div>
+                                <div class="text-sm text-gray-600">{{ ticket_info.type.description }}</div>
+                                <div class="text-sm text-gray-600 mt-2">
+                                    {{ ticket_info.type.attendees_per_ticket }} attendee(s) per ticket
+                                </div>
+                                <div class="mt-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if ticket_info.available_count == 0 %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %}">
+                                        {% if ticket_info.available_count == 0 %}Sold Out{% else %}Available{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            
+                            {% if event.registration_deadline %}
+                            <div class="text-sm text-gray-600 mt-4">
+                                Registration closes on {{ event.registration_deadline }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Book Tickets CTA Button -->
+                        <div class="mt-8">
+                            {% if not user.is_authenticated %}
+                            <div class="mb-4 text-center text-gray-700">
+                                <p>Please log in or sign up to book tickets</p>
+                            </div>
+                            <div class="space-y-4">
+                                <a href="{% url 'login' %}?next={{ request.path }}" class="block w-full text-center bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 mb-2">
+                                    Login to Book Tickets
+                                </a>
+                                <a href="{% url 'signup' %}?next={{ request.path }}" class="block w-full text-center bg-white border border-blue-600 text-blue-600 py-3 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200">
+                                    Sign Up for an Account
+                                </a>
+                            </div>
+                            {% else %}
+                                <a href="{% url 'book_ticket' event.id %}" class="block w-full text-center bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 text-lg font-semibold">
+                                    Book Tickets
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Event Sponsors Section -->
+                {% if event.sponsors.exists %}
+                <div class="mt-12 pt-8 border-t border-gray-200">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-6 text-center">Event Sponsors</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 items-center">
+                        {% for sponsor in event.sponsors.all %}
+                        <div class="text-center">
+                            {% if sponsor.website_url %}
+                                <a href="{{ sponsor.website_url }}" target="_blank" rel="noopener" class="block hover:opacity-75 transition-opacity">
+                                    {% if sponsor.logo_url %}
+                                        {% google_drive_image sponsor.logo_url sponsor.sponsor_name "h-16 w-auto mx-auto object-contain" %}
+                                    {% else %}
+                                        <div class="h-16 w-24 mx-auto bg-gray-200 rounded flex items-center justify-center">
+                                            <span class="text-xs text-gray-500 text-center">{{ sponsor.sponsor_name }}</span>
+                                        </div>
+                                    {% endif %}
+                                    <p class="text-sm text-gray-600 mt-2">{{ sponsor.sponsor_name }}</p>
+                                    {% if sponsor.sponsor_type %}
+                                        <p class="text-xs text-gray-500">{{ sponsor.sponsor_type }}</p>
+                                    {% endif %}
+                                </a>
+                            {% else %}
+                                <div class="block">
+                                    {% if sponsor.logo_url %}
+                                        <img src="https://drive.google.com/thumbnail?id={{ sponsor.logo_id }}&sz=s800" 
+                                        alt="Library Banner" 
+                                        class="w-full h-full object-cover">
+                                    {% else %}
+                                        <div class="h-16 w-24 mx-auto bg-gray-200 rounded flex items-center justify-center">
+                                            <span class="text-xs text-gray-500 text-center">{{ sponsor.sponsor_name }}</span>
+                                        </div>
+                                    {% endif %}
+                                    <p class="text-sm text-gray-600 mt-2">{{ sponsor.sponsor_name }}</p>
+                                    {% if sponsor.sponsor_type %}
+                                        <p class="text-xs text-gray-500">{{ sponsor.sponsor_type }}</p>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}

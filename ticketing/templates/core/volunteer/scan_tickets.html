@@ -1,0 +1,625 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Scan Tickets{% endblock %}
+
+{% block extra_head %}
+<style>
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .animate-pulse {
+        animation: pulse 0.8s ease-in-out infinite;
+    }
+    
+    @keyframes flash-red {
+        0%, 100% { background-color: rgb(254, 226, 226); /* bg-red-100 */ }
+        50% { background-color: rgb(252, 165, 165); /* bg-red-300 */ }
+    }
+    .flash-red {
+        animation: flash-red 0.5s ease-in-out 5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <a href="{% url 'volunteer_dashboard' %}" class="text-blue-600 hover:text-blue-800 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Back to Dashboard
+                </a>
+                <h1 class="text-2xl font-bold text-center flex-grow">Ticket Scanner</h1>
+                <div class="w-24"></div><!-- Spacer for balance -->
+            </div>
+            
+            <div class="flex flex-col items-center">
+                <!-- Video Preview -->
+                <div class="relative w-full max-w-md h-72 bg-black mb-6 rounded-lg overflow-hidden">
+                    <div id="qr-video" class="w-full h-full"></div>
+                    <div id="camera-message" class="absolute inset-0 flex items-center justify-center text-white bg-black bg-opacity-70 p-4 text-center hidden">
+                        <div>
+                            <div class="text-4xl mb-2">📷</div>
+                            <p id="camera-message-text" class="text-lg">Camera not available</p>
+                            <p class="text-sm mt-2">Please check your camera permissions</p>
+                        </div>
+                    </div>
+                    <div id="scan-region-highlight" class="absolute inset-0 border-2 border-green-400 opacity-0 transition-opacity duration-300"></div>
+                </div>
+                
+                <!-- Camera Status Message -->
+                <div id="camera-status" class="w-full max-w-md mb-3 text-sm text-center text-gray-600">
+                    Ready to scan QR codes. Click "Start Scanner" to begin.
+                </div>
+                
+                <!-- Controls -->
+                <div class="flex space-x-4 mb-6">
+                    <button id="start-button" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+                        Start Scanner
+                    </button>
+                    <button id="stop-button" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700" disabled>
+                        Stop Scanner
+                    </button>
+                </div>
+                
+                <!-- Manual Ticket Entry -->
+                <div class="w-full max-w-md mb-6 p-4 border border-gray-300 rounded-lg bg-gray-50">
+                    <h3 class="text-lg font-medium mb-3 text-gray-700">Manual Ticket Validation</h3>
+                    <div class="mb-3 text-sm text-gray-600">
+                        <p>Use this form when a ticket's QR code is damaged or can't be scanned. 
+                           You'll need both the Ticket ID and Security Token from the ticket.</p>
+                    </div>
+                    <div class="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+                        <div class="flex-grow">
+                            <label for="ticket-id-input" class="block text-xs text-gray-700 mb-1">Ticket ID</label>
+                            <input type="text" id="ticket-id-input" placeholder="Enter Ticket ID" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex-grow">
+                            <label for="token-input" class="block text-xs text-gray-700 mb-1">Security Token</label>
+                            <input type="text" id="token-input" placeholder="Security Token" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="flex items-end">
+                            <button id="manual-validate-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 whitespace-nowrap">
+                                Validate Ticket
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Press Enter after entering both fields to validate quickly.</p>
+                </div>
+                
+                <!-- Result Display -->
+                <div id="result-container" class="w-full max-w-md">
+                    <div id="result-box" class="hidden mb-4 p-4 rounded-lg">
+                        <div id="result-icon" class="text-center text-6xl mb-2"></div>
+                        <h2 id="result-title" class="text-xl font-bold text-center mb-2"></h2>
+                        <div id="result-details" class="text-center"></div>
+                    </div>
+                    
+                    <!-- Specific Error Message for Already Used Tickets -->
+                    <div id="already-used-message" class="hidden mb-4 p-4 rounded-lg bg-red-100 border-2 border-red-600 relative">
+                        <button id="close-already-used" class="absolute top-2 right-2 text-red-700 hover:text-red-900">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        <div class="text-center text-6xl mb-2">⚠️</div>
+                        <h2 class="text-xl font-bold text-center mb-2 text-red-700">TICKET ALREADY USED</h2>
+                        <div id="already-used-details" class="text-center"></div>
+                    </div>
+                    
+                    <div id="scan-history" class="border rounded-lg overflow-hidden">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="py-2 px-4 text-left">Time</th>
+                                    <th class="py-2 px-4 text-left">Ticket</th>
+                                    <th class="py-2 px-4 text-left">Result</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-body">
+                                <!-- Scan results will appear here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audio elements for success/failure sounds -->
+<audio id="success-sound" src="{% static 'sounds/SUCCESSFUL_SCAN.mp3' %}"></audio>
+<audio id="failure-sound" src="{% static 'sounds/FAILED_NOT VALIDATED.wav' %}"></audio>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const html5QrCode = new Html5Qrcode("qr-video");
+    const startButton = document.getElementById('start-button');
+    const stopButton = document.getElementById('stop-button');
+    const resultBox = document.getElementById('result-box');
+    const resultIcon = document.getElementById('result-icon');
+    const resultTitle = document.getElementById('result-title');
+    const resultDetails = document.getElementById('result-details');
+    const scanRegion = document.getElementById('scan-region-highlight');
+    const historyBody = document.getElementById('history-body');
+    const successSound = document.getElementById('success-sound');
+    const failureSound = document.getElementById('failure-sound');
+    const cameraMessage = document.getElementById('camera-message');
+    const cameraMessageText = document.getElementById('camera-message-text');
+    const cameraStatus = document.getElementById('camera-status');
+    
+    // Manual validation elements
+    const ticketIdInput = document.getElementById('ticket-id-input');
+    const tokenInput = document.getElementById('token-input');
+    const manualValidateBtn = document.getElementById('manual-validate-btn');
+    const alreadyUsedMessage = document.getElementById('already-used-message');
+    const alreadyUsedDetails = document.getElementById('already-used-details');
+    const closeAlreadyUsedBtn = document.getElementById('close-already-used');
+    
+    let isScanning = false;
+    let selectedCamera = null;
+    
+    // Function to update camera status
+    function updateCameraStatus(status, isError = false) {
+        cameraStatus.textContent = status;
+        if (isError) {
+            cameraStatus.classList.add('text-red-600');
+            cameraStatus.classList.remove('text-gray-600');
+        } else {
+            cameraStatus.classList.remove('text-red-600');
+            cameraStatus.classList.add('text-gray-600');
+        }
+    }
+    
+    // Function to show camera message overlay
+    function showCameraMessage(message) {
+        cameraMessageText.textContent = message;
+        cameraMessage.classList.remove('hidden');
+    }
+    
+    // Function to hide camera message overlay
+    function hideCameraMessage() {
+        cameraMessage.classList.add('hidden');
+    }
+    
+    // Configure scan options
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        if (isScanning) {
+            try {
+                console.log("QR Code detected, content:", decodedText);
+                // Try to parse the QR code content as JSON
+                let ticketData;
+                
+                try {
+                    ticketData = JSON.parse(decodedText);
+                    console.log("Parsed as JSON:", ticketData);
+                } catch (parseError) {
+                    // If not JSON, check if it might be in URL format with parameters
+                    if (decodedText.includes('ticket_id=') && decodedText.includes('unique_secure_token=')) {
+                        const url = new URL(decodedText);
+                        const params = new URLSearchParams(url.search);
+                        ticketData = {
+                            ticket_id: params.get('ticket_id'),
+                            unique_secure_token: params.get('unique_secure_token')
+                        };
+                    } else if (decodedText.includes('|')) {
+                        // Handle pipe-delimited format (old format)
+                        const parts = decodedText.split('|');
+                        try {
+                            const jsonPart = parts[0];
+                            const tokenPart = parts[1];
+                            const jsonData = JSON.parse(jsonPart);
+                            ticketData = {
+                                ticket_id: jsonData.ticket_id,
+                                unique_secure_token: tokenPart
+                            };
+                            console.log("Parsed as pipe-delimited:", ticketData);
+                        } catch (e) {
+                            throw new Error("Could not parse pipe-delimited format");
+                        }
+                    } else {
+                        throw new Error("Unrecognized QR code format");
+                    }
+                }
+                
+                // Handle both new and old format QR codes
+                if (ticketData && ticketData.tid && ticketData.tok) {
+                    // New compact format (tid = ticket_id, tok = token)
+                    validateTicket(ticketData.tid, ticketData.tok);
+                } else if (ticketData && ticketData.ticket_id && ticketData.unique_secure_token) {
+                    // Legacy format with direct ticket_id and unique_secure_token
+                    validateTicket(ticketData.ticket_id, ticketData.unique_secure_token);
+                } else if (ticketData && (ticketData.tid || ticketData.ticket_id)) {
+                    // Try to extract the token from other fields
+                    const id = ticketData.tid || ticketData.ticket_id;
+                    const token = ticketData.tok || ticketData.token || ticketData.secure_token || ticketData.unique_secure_token;
+                    if (token) {
+                        validateTicket(id, token);
+                    } else {
+                        showError("Invalid QR code: Missing security token");
+                    }
+                } else {
+                    showError("Invalid QR code: Missing required ticket data");
+                }
+            } catch (error) {
+                console.error("QR code parsing error:", error);
+                showError("Could not parse QR code: " + error.message);
+            }
+        }
+    };
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    // Add camera selector dropdown
+    const cameraSelector = document.createElement('select');
+    cameraSelector.id = 'camera-selector';
+    cameraSelector.className = 'px-3 py-2 border border-gray-300 rounded-md mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500';
+    cameraSelector.innerHTML = '<option value="">Loading cameras...</option>';
+    document.querySelector('.flex.space-x-4.mb-6').prepend(cameraSelector);
+    
+    // Camera selection options
+    let cameras = [];
+    
+    // Populate camera list when available
+    Html5Qrcode.getCameras()
+        .then(devices => {
+            cameras = devices;
+            cameraSelector.innerHTML = '';
+            
+            if (devices && devices.length) {
+                devices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.text = device.label || `Camera ${index + 1}`;
+                    cameraSelector.appendChild(option);
+                });
+                console.log("Available cameras:", devices);
+            } else {
+                cameraSelector.innerHTML = '<option value="">No cameras found</option>';
+                console.error("No cameras found");
+            }
+        })
+        .catch(err => {
+            console.error("Error getting cameras:", err);
+            cameraSelector.innerHTML = '<option value="">Error loading cameras</option>';
+        });
+
+    startButton.addEventListener('click', () => {
+        // Get selected camera or use default
+        const selectedCameraId = cameraSelector.value;
+        const cameraConfig = selectedCameraId 
+            ? { deviceId: { exact: selectedCameraId } } 
+            : { facingMode: "environment" };
+        
+        console.log("Starting camera with config:", cameraConfig);
+        updateCameraStatus("Starting camera...");
+        hideCameraMessage();
+        
+        // Try to start with the selected camera
+        html5QrCode.start(
+            cameraConfig, 
+            config, 
+            qrCodeSuccessCallback
+        )
+        .then(() => {
+            console.log("QR scanner started successfully");
+            isScanning = true;
+            startButton.disabled = true;
+            stopButton.disabled = false;
+            updateCameraStatus("Camera active. Ready to scan QR codes.");
+        })
+        .catch(err => {
+            console.error("Error starting scanner:", err);
+            
+            // Show more detailed error message
+            let errorMsg = "Could not start scanner. ";
+            
+            if (err.name === "NotAllowedError") {
+                errorMsg += "Please allow camera access permissions in your browser settings.";
+                showCameraMessage("Camera Access Denied");
+            } else if (err.name === "NotFoundError") {
+                errorMsg += "No camera found. Please check if your device has a camera.";
+                showCameraMessage("No Camera Found");
+            } else if (err.name === "NotReadableError") {
+                errorMsg += "Camera may be in use by another application.";
+                showCameraMessage("Camera In Use");
+            } else {
+                errorMsg += err.message || "Unknown error.";
+                showCameraMessage("Camera Error");
+            }
+            
+            updateCameraStatus(errorMsg, true);
+            showError(errorMsg + " Please try using the manual ticket entry option below.");
+        });
+    });
+
+    stopButton.addEventListener('click', () => {
+        if (isScanning) {
+            updateCameraStatus("Stopping scanner...");
+            html5QrCode.stop()
+            .then(() => {
+                isScanning = false;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                updateCameraStatus("Scanner stopped. Click 'Start Scanner' to begin again.");
+                showCameraMessage("Scanner Stopped");
+            })
+            .catch(err => {
+                console.error("Error stopping scanner:", err);
+                updateCameraStatus("Error stopping scanner: " + err.message, true);
+            });
+        }
+    });
+
+    function validateTicket(ticketId, secureToken) {
+        // Show scanning feedback
+        scanRegion.classList.add('opacity-100');
+        
+        // Hide any previous already-used message
+        alreadyUsedMessage.classList.add('hidden');
+        
+        fetch(`/api/validate-ticket/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                tid: ticketId,         // Use new compact naming
+                tok: secureToken,      // Use new compact naming
+                ticket_id: ticketId,   // Also include legacy naming for backward compatibility
+                unique_secure_token: secureToken
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Hide scanning feedback
+            scanRegion.classList.remove('opacity-100');
+            
+            // Check for specific error codes
+            if (!data.success && data.error_code === 'ALREADY_USED') {
+                showAlreadyUsedError(data);
+            } else if (data.success) {
+                showSuccess(data);
+            } else {
+                showFailure(data);
+            }
+            
+            // Add to history
+            addToHistory(data);
+            
+            // Resume scanning after 5 seconds for normal results
+            if (data.success || (!data.message || !data.message.includes('already been used'))) {
+                setTimeout(() => {
+                    resultBox.classList.add('hidden');
+                }, 5000);
+            }
+        })
+        .catch(error => {
+            console.error("Error validating ticket:", error);
+            scanRegion.classList.remove('opacity-100');
+            showError("Network error. Please try again.");
+        });
+    }
+    
+    function showSuccess(data) {
+        // Hide any previously shown already-used message
+        alreadyUsedMessage.classList.add('hidden');
+        
+        resultBox.className = "block mb-4 p-4 rounded-lg bg-green-100 border-2 border-green-500";
+        resultIcon.innerHTML = "✅";
+        resultTitle.textContent = "VALID TICKET";
+        resultTitle.className = "text-xl font-bold text-center mb-2 text-green-700";
+        
+        let detailsHTML = `
+            <p class="mb-1"><strong>Ticket Number:</strong> ${data.ticket_number || 'N/A'}</p>
+            <p class="mb-1"><strong>Ticket Type:</strong> ${data.ticket_type_name || 'N/A'}</p>
+            <p class="mb-1"><strong>Attendees:</strong> ${data.entry_count || '1'}</p>
+            <p class="mb-1"><strong>Event:</strong> ${data.event_name || 'N/A'}</p>
+            <p class="mb-3"><strong>Status:</strong> <span class="bg-green-600 text-white px-2 py-1 rounded">VALIDATED</span></p>
+            <p class="text-sm text-gray-600">This ticket has been marked as used and cannot be validated again.</p>
+        `;
+        
+        resultDetails.innerHTML = detailsHTML;
+        resultBox.classList.remove('hidden');
+        
+        // Add pulsing effect for success
+        resultBox.classList.add('animate-pulse');
+        setTimeout(() => {
+            resultBox.classList.remove('animate-pulse');
+        }, 2000);
+        
+        // Play success sound
+        successSound.play().catch(e => console.log("Error playing sound:", e));
+    }
+    
+    function showFailure(data) {
+        // Hide any previously shown already-used message
+        alreadyUsedMessage.classList.add('hidden');
+        
+        resultBox.className = "block mb-4 p-4 rounded-lg bg-red-100 border-2 border-red-500";
+        resultIcon.innerHTML = "❌";
+        resultTitle.textContent = "INVALID TICKET";
+        resultTitle.className = "text-xl font-bold text-center mb-2 text-red-700";
+        
+        let errorMessage = data.message || "Unknown error";
+        let ticketNumber = data.ticket_number ? `<p class="mb-1"><strong>Ticket Number:</strong> ${data.ticket_number}</p>` : '';
+        
+        resultDetails.innerHTML = `
+            ${ticketNumber}
+            <p class="mb-1"><strong>Error:</strong> ${errorMessage}</p>
+            <p class="mt-2 text-sm text-gray-600">Please verify the ticket information and try again.</p>
+        `;
+        resultBox.classList.remove('hidden');
+        
+        // Play failure sound
+        failureSound.play().catch(e => console.log("Error playing sound:", e));
+    }
+    
+    function showError(message) {
+        // Hide any previously shown already-used message
+        alreadyUsedMessage.classList.add('hidden');
+        
+        resultBox.className = "block mb-4 p-4 rounded-lg bg-yellow-100 border-2 border-yellow-500";
+        resultIcon.innerHTML = "⚠️";
+        resultTitle.textContent = "ERROR";
+        resultTitle.className = "text-xl font-bold text-center mb-2 text-yellow-700";
+        
+        resultDetails.innerHTML = `
+            <p class="mb-3">${message}</p>
+            <p class="text-sm text-gray-600">If this error persists, please contact technical support.</p>
+        `;
+        resultBox.classList.remove('hidden');
+        
+        // Add flash-red animation to draw attention
+        resultBox.classList.add('flash-red');
+        setTimeout(() => {
+            resultBox.classList.remove('flash-red');
+        }, 2500);
+        
+        // Play failure sound
+        failureSound.play().catch(e => console.log("Error playing sound:", e));
+    }
+    
+    function addToHistory(data) {
+        const now = new Date();
+        const time = now.toLocaleTimeString();
+        
+        const row = document.createElement('tr');
+        row.className = data.success ? "bg-green-50" : "bg-red-50";
+        
+        row.innerHTML = `
+            <td class="py-2 px-4">${time}</td>
+            <td class="py-2 px-4">${data.ticket_number || 'N/A'}</td>
+            <td class="py-2 px-4">${data.success ? 'Valid' : 'Invalid'}</td>
+        `;
+        
+        historyBody.prepend(row);
+        
+        // Keep only last 10 entries
+        if (historyBody.children.length > 10) {
+            historyBody.removeChild(historyBody.lastChild);
+        }
+    }
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Special error handling for already used tickets
+    function showAlreadyUsedError(data) {
+        // Hide the regular result box
+        resultBox.classList.add('hidden');
+        
+        // Show the specific already-used message
+        alreadyUsedMessage.classList.remove('hidden');
+        
+        // Set details
+        let detailsHTML = `
+            <p class="mb-1"><strong>Ticket Number:</strong> ${data.ticket_number || 'N/A'}</p>
+            <p class="mb-1"><strong>Ticket Type:</strong> ${data.ticket_type_name || 'N/A'}</p>
+            <p class="mb-1"><strong>Event:</strong> ${data.event_name || 'N/A'}</p>
+            <p class="mb-1"><strong>Previously Used:</strong> ${data.used_at || 'Unknown time'}</p>
+        `;
+        
+        if (data.validated_by) {
+            detailsHTML += `<p class="mb-1"><strong>Validated By:</strong> ${data.validated_by}</p>`;
+        }
+        
+        detailsHTML += `<p class="mt-3 text-sm text-gray-600">This ticket has already been validated and cannot be used again.</p>`;
+        
+        alreadyUsedDetails.innerHTML = detailsHTML;
+        
+        // Add flash effect
+        flashElement(alreadyUsedMessage);
+        
+        // Play failure sound twice for emphasis
+        failureSound.play().catch(e => console.log("Error playing sound:", e));
+        setTimeout(() => {
+            failureSound.play().catch(e => console.log("Error playing sound:", e));
+        }, 800);
+    }
+    
+    // Flash element effect
+    function flashElement(element) {
+        let flashCount = 0;
+        const maxFlashes = 5;
+        const interval = setInterval(() => {
+            element.classList.toggle('bg-red-300');
+            element.classList.toggle('bg-red-100');
+            flashCount++;
+            if (flashCount >= maxFlashes * 2) {
+                clearInterval(interval);
+                element.classList.remove('bg-red-300');
+                element.classList.add('bg-red-100');
+            }
+        }, 300);
+    }
+    
+    // Function to handle manual validation
+    function performManualValidation() {
+        const ticketId = ticketIdInput.value.trim();
+        const secureToken = tokenInput.value.trim();
+        
+        if (!ticketId || !secureToken) {
+            showError("Please enter both Ticket ID and Security Token");
+            return;
+        }
+        
+        validateTicket(ticketId, secureToken);
+        
+        // Clear input fields after submission
+        ticketIdInput.value = '';
+        tokenInput.value = '';
+    }
+    
+    // Manual validation button handler
+    manualValidateBtn.addEventListener('click', performManualValidation);
+    
+    // Add keyboard support (Enter key)
+    ticketIdInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            if (tokenInput.value.trim()) {
+                performManualValidation();
+            } else {
+                tokenInput.focus();
+            }
+        }
+    });
+    
+    tokenInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performManualValidation();
+        }
+    });
+    
+    // Add close button handler for the already used message
+    closeAlreadyUsedBtn.addEventListener('click', function() {
+        alreadyUsedMessage.classList.add('hidden');
+    });
+});
+</script>
+{% endblock %}

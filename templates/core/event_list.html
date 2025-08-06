@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}Events - Tapnex Tickets{% endblock %}
+
+{% block content %}
+    <div class="min-h-screen bg-white">
+        <div class="max-w-4xl mx-auto py-12 px-4">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">All Events</h1>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                {% for event_data in events_with_prices %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                    {% if event_data.event.get_banner_image_url %}
+                        <img src="{{ event_data.event.get_banner_image_url }}" alt="{{ event_data.event.title }}" class="w-full h-48 object-cover">
+                    {% elif event_data.event.banner_image %}
+                        <img src="{{ event_data.event.banner_image.url }}" alt="{{ event_data.event.title }}" class="w-full h-48 object-cover">
+                    {% endif %}
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ event_data.event.title }}</h3>
+                        <p class="text-gray-600 mb-4">{{ event_data.event.description|truncatechars:100 }}</p>
+                        <div class="mb-4">
+                            <div class="text-gray-700"><i class="fas fa-calendar"></i> {{ event_data.event.date }}</div>
+                            <div class="text-gray-700"><i class="fas fa-map-marker-alt"></i> {{ event_data.event.venue }}</div>
+                            <div class="text-gray-700"><i class="fas fa-ticket-alt"></i> 
+                                {% if event_data.min_price %}
+                                    Starting from ₹{{ event_data.min_price }}
+                                {% else %}
+                                    Tickets coming soon
+                                {% endif %}
+                            </div>
+                        </div>
+                        <a href="{% url 'event_detail' event_data.event.id %}" class="block w-full text-center bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                            View Details
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-3 text-center text-gray-600">
+                    No events available at the moment.
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-8 text-center">
+                <a href="{% url 'home' %}" class="text-blue-600 hover:underline">Back to Home</a>
+            </div>
+        </div>
+    </div>
+{% endblock %}

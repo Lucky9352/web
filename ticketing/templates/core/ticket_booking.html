@@ -1,0 +1,283 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load ticketing_extras %}
+
+{% block title %}Book Tickets - {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Event Details Header -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden mb-8">
+            {% if event.get_banner_image_url or event.banner_image %}
+                {% if event.get_banner_image_url %}
+                    <img src="{{ event.get_banner_image_url }}" alt="{{ event.title }}" class="w-full h-64 object-cover">
+                {% elif event.banner_image %}
+                    <img src="{{ event.banner_image.url }}" alt="{{ event.title }}" class="w-full h-64 object-cover">
+                {% endif %}
+                <div class="p-6">
+                    <h1 class="text-3xl font-bold mb-2">{{ event.title }}</h1>
+                    <div class="flex flex-wrap gap-4 text-gray-700">
+                        <div class="flex items-center">
+                            <i class="fas fa-calendar-alt mr-2"></i>
+                            {{ event.date }}
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-clock mr-2"></i>
+                            {{ event.time }}
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fas fa-map-marker-alt mr-2"></i>
+                            {{ event.venue }}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+            <div class="p-6 bg-blue-600 text-white">
+                <h1 class="text-3xl font-bold mb-2">{{ event.title }}</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-white/90">
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        {{ event.date }}
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-clock mr-2"></i>
+                        {{ event.time }}
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-map-marker-alt mr-2"></i>
+                        {{ event.venue }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="p-4 bg-blue-50 border-b border-blue-100">
+                <p class="text-blue-800 font-medium text-center">
+                    <i class="fas fa-info-circle mr-2"></i> 
+                    You're booking tickets for this event. Select the number of tickets you need below.
+                </p>
+            </div>
+        </div>
+
+        <!-- Customer Information -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Customer Information</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Name</label>
+                    <div class="mt-1 text-gray-900">{{ user.get_full_name }}</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <div class="mt-1 text-gray-900">{{ user.email }}</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Mobile Number</label>
+                    <div class="mt-1 text-gray-900">{{ user.mobile_number }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ticket Selection Form -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6">Select Tickets</h2>
+            <form method="POST" action="{% url 'book_ticket' event.id %}" class="space-y-6" id="ticketBookingForm">
+                {% csrf_token %}
+                
+                <!-- Ticket Types -->
+                <div class="space-y-6">
+                    {% for ticket_type in ticket_types %}
+                    <div class="bg-gray-50 p-4 rounded-lg border {% if ticket_type.available_quantity == 0 %}border-red-200{% else %}border-gray-200{% endif %}">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <div class="flex items-center">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ ticket_type.type_name }}</h3>
+                                    {% if ticket_type.available_quantity == 0 %}
+                                    <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Sold Out
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-gray-600 font-medium">₹{{ ticket_type.price }}</p>
+                                {% if ticket_type.description %}
+                                <p class="text-sm text-gray-500 mt-1">{{ ticket_type.description }}</p>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <span class="text-sm text-gray-500">
+                                        <i class="fas fa-users mr-1"></i>
+                                        {{ ticket_type.attendees_per_ticket }} attendee(s) per ticket
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <button type="button" onclick="decrementTicket('{{ ticket_type.id }}')"
+                                    class="bg-gray-200 text-gray-600 hover:bg-gray-300 h-8 w-8 rounded-full flex items-center justify-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                    {% if ticket_type.available_quantity == 0 %}disabled{% endif %}>
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                                <input type="number" name="ticket_{{ ticket_type.id }}" id="ticket_{{ ticket_type.id }}"
+                                    class="w-16 text-center border-gray-300 rounded-md"
+                                    value="0" min="0" max="{{ ticket_type.available_quantity }}" readonly>
+                                <button type="button" onclick="incrementTicket('{{ ticket_type.id }}')"
+                                    class="bg-gray-200 text-gray-600 hover:bg-gray-300 h-8 w-8 rounded-full flex items-center justify-center focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                                    {% if ticket_type.available_quantity == 0 %}disabled{% endif %}>
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% if ticket_type.available_quantity > 0 %}
+                        <div class="text-sm text-gray-500">
+                            Up to {{ ticket_type.available_quantity }} tickets available ({{ ticket_type.available_quantity|multiply:ticket_type.attendees_per_ticket }} attendee capacity)
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-red-500">No tickets available for this type</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Order Summary -->
+                <div class="mt-8 border-t pt-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Order Summary</h3>
+                    <div id="orderSummaryEmpty" class="py-6 text-center text-gray-500">
+                        <i class="fas fa-ticket-alt text-4xl mb-3 block"></i>
+                        <p>Select tickets to see your order summary</p>
+                    </div>
+                    <div id="orderSummary" class="space-y-3 hidden">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                    <div class="mt-4 pt-4 border-t">
+                        <div class="flex justify-between text-lg font-semibold">
+                            <span>Total Amount:</span>
+                            <span id="totalAmount">₹0</span>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-600 mt-1">
+                            <span>Total Attendees:</span>
+                            <span id="totalAttendees">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Proceed to Checkout Button -->
+                <div class="mt-8">
+                    <button type="submit" id="checkoutButton"
+                        class="w-full bg-blue-600 text-white py-4 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed text-lg font-semibold"
+                        disabled>
+                        <i class="fas fa-shopping-cart mr-2"></i> Proceed to Checkout
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function incrementTicket(ticketTypeId) {
+    const input = document.getElementById(`ticket_${ticketTypeId}`);
+    const currentValue = parseInt(input.value);
+    const maxValue = parseInt(input.max);
+    
+    if (currentValue < maxValue) {
+        input.value = currentValue + 1;
+        updateOrderSummary();
+    }
+}
+
+function decrementTicket(ticketTypeId) {
+    const input = document.getElementById(`ticket_${ticketTypeId}`);
+    const currentValue = parseInt(input.value);
+    
+    if (currentValue > 0) {
+        input.value = currentValue - 1;
+        updateOrderSummary();
+    }
+}
+
+function updateOrderSummary() {
+    const orderSummary = document.getElementById('orderSummary');
+    const orderSummaryEmpty = document.getElementById('orderSummaryEmpty');
+    const totalAmountElement = document.getElementById('totalAmount');
+    const totalAttendeesElement = document.getElementById('totalAttendees');
+    const checkoutButton = document.getElementById('checkoutButton');
+    
+    let totalAmount = 0;
+    let totalAttendees = 0;
+    let hasTickets = false;
+
+    orderSummary.innerHTML = '';
+
+    // Get all ticket type inputs
+    const ticketInputs = document.querySelectorAll('input[name^="ticket_"]');
+    
+    ticketInputs.forEach(input => {
+        const quantity = parseInt(input.value);
+        if (quantity > 0) {
+            // Extract ticket type ID from input name
+            const ticketTypeId = input.name.split('_')[1];
+            
+            // Find the corresponding ticket type data
+            const ticketTypeElement = input.closest('.bg-gray-50');
+            const priceElement = ticketTypeElement.querySelector('.text-gray-600');
+            const price = parseFloat(priceElement.textContent.replace('₹', ''));
+            
+            // Get attendees per ticket from the text content
+            const attendeesPerTicketElement = ticketTypeElement.querySelector('.text-sm.text-gray-500 i.fas.fa-users');
+            let attendeesPerTicket = 1;
+            
+            if (attendeesPerTicketElement) {
+                const parentText = attendeesPerTicketElement.parentElement.textContent.trim();
+                const attendeesMatch = parentText.match(/(\d+)\s+attendee\(s\)\s+per\s+ticket/i);
+                attendeesPerTicket = attendeesMatch ? parseInt(attendeesMatch[1]) : 1;
+            }
+            
+            hasTickets = true;
+            const subtotal = quantity * price;
+            totalAmount += subtotal;
+            totalAttendees += quantity * attendeesPerTicket;
+            
+            // Get ticket type name
+            const typeNameElement = ticketTypeElement.querySelector('h3');
+            const typeName = typeNameElement.textContent.trim();
+            
+            orderSummary.innerHTML += `
+                <div class="flex justify-between py-2">
+                    <div>
+                        <span class="font-medium">${typeName}</span>
+                        <div class="text-sm text-gray-500">${quantity} × ₹${price.toFixed(2)}</div>
+                    </div>
+                    <div class="font-medium">₹${subtotal.toFixed(2)}</div>
+                </div>
+            `;
+        }
+    });
+
+    // Show/hide elements based on whether tickets are selected
+    if (hasTickets) {
+        orderSummary.classList.remove('hidden');
+        orderSummaryEmpty.classList.add('hidden');
+    } else {
+        orderSummary.classList.add('hidden');
+        orderSummaryEmpty.classList.remove('hidden');
+    }
+
+    totalAmountElement.textContent = `₹${totalAmount.toFixed(2)}`;
+    totalAttendeesElement.textContent = totalAttendees;
+    checkoutButton.disabled = !hasTickets;
+    
+    // Update button text based on selection
+    if (hasTickets) {
+        checkoutButton.innerHTML = `<i class="fas fa-shopping-cart mr-2"></i> Proceed to Checkout (₹${totalAmount.toFixed(2)})`;
+    } else {
+        checkoutButton.innerHTML = `<i class="fas fa-shopping-cart mr-2"></i> Proceed to Checkout`;
+    }
+}
+
+// Initialize order summary on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateOrderSummary();
+});
+</script>
+{% endblock %}
